@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -69,10 +68,6 @@ func loadRules(filename string) ([]rule, error) {
 		description := split[1]
 
 		match := ruleMatcher.FindStringSubmatch(ruleStr)
-		log.Printf("%q", ruleStr)
-		for i, m := range match {
-			log.Printf("%d : %q", i, m)
-		}
 		if len(match) == 0 {
 			return nil, fmt.Errorf("Invalid rule: %q" + ruleStr)
 		}
