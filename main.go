@@ -10,6 +10,7 @@ type segment struct {
 	length int
 	name   string
 	bytes  []byte
+	skip   bool
 }
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 			length: length,
 			name:   rule.Description,
 			bytes:  bytes,
+			skip:   rule.Skip,
 		})
 
 		offset += length

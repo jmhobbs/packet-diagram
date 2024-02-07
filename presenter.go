@@ -15,7 +15,18 @@ type Presenter interface {
 type terminalPresenter struct {
 }
 
-func (t terminalPresenter) Present(segments []segment) string {
+func (t terminalPresenter) Present(allSegments []segment) string {
+
+	// flatten our skips into blocks
+	segments := []segment{}
+	for _, s := range allSegments {
+		if len(segments) > 0 && s.skip && segments[len(segments)-1].skip {
+			continue
+
+		}
+		segments = append(segments, s)
+	}
+
 	var builder strings.Builder
 
 	nullStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
@@ -30,21 +41,42 @@ func (t terminalPresenter) Present(segments []segment) string {
 		}
 	}
 
+	descriptionLine := ""
+	descriptionLineHeavy := ""
+	for i := 0; i < longestName; i++ {
+		descriptionLine += "┄"
+		descriptionLineHeavy += "━"
+	}
+
 	nameFmtString := fmt.Sprintf("%%-%ds", longestName)
 
-	builder.WriteString("┏━━━━━━━━┯━━━━━━━━━━━━━━━━━━━━━━━━━┯━━━━━━━━━━━━━━━━━━━━━━━━━┯━━━━━━━━┯━━━━━━━━┯━")
-	for i := 0; i < longestName; i++ {
-		builder.WriteRune('━')
+	if segments[0].skip {
+		builder.WriteString("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	} else {
+		builder.WriteString("┏━━━━━━━━┯━━━━━━━━━━━━━━━━━━━━━━━━━┯━━━━━━━━━━━━━━━━━━━━━━━━━┯━━━━━━━━┯━━━━━━━━┯━")
 	}
+	builder.WriteString(descriptionLineHeavy)
 	builder.WriteString("━┓\n")
 
-	separator := "┠┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┼┄"
-	for i := 0; i < longestName; i++ {
-		separator += "┄"
-	}
-	separator += "┄┨"
+	skipText := fmt.Sprintf("┃%s┃", lipgloss.NewStyle().
+		Width(81+longestName).
+		Align(lipgloss.Center).Render("--- skipped ---"))
+
+	separator := "┠┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┼┄" + descriptionLine + "┄┨"
+	skipJoinBottomSseparator := "┠┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┬┄" + descriptionLine + "┄┨"
+	skipJoinTopSseparator := "┠┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┴┄" + descriptionLine + "┄┨"
 
 	for j, segment := range segments {
+		if segment.skip {
+			builder.WriteString(skipText)
+			builder.WriteRune('\n')
+			if j+1 < len(segments) {
+				builder.WriteString(skipJoinBottomSseparator)
+				builder.WriteRune('\n')
+			}
+			continue
+		}
+
 		lines := int(math.Ceil(float64(len(segment.bytes)) / 16.0))
 
 		for line := 0; line < lines; line++ {
@@ -95,15 +127,21 @@ func (t terminalPresenter) Present(segments []segment) string {
 		}
 
 		if j < len(segments)-1 {
-			builder.WriteString(separator)
+			if segments[j+1].skip {
+				builder.WriteString(skipJoinTopSseparator)
+			} else {
+				builder.WriteString(separator)
+			}
 			builder.WriteRune('\n')
 		}
 	}
 
-	builder.WriteString("┗━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━┷━━━━━━━━┷━━━━━━━━┷━")
-	for i := 0; i < longestName; i++ {
-		builder.WriteRune('━')
+	if segments[len(segments)-1].skip {
+		builder.WriteString("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	} else {
+		builder.WriteString("┗━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━┷━━━━━━━━┷━━━━━━━━┷━")
 	}
+	builder.WriteString(descriptionLineHeavy)
 	builder.WriteString("━┛\n")
 
 	return builder.String()
