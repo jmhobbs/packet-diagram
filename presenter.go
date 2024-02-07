@@ -59,7 +59,7 @@ func (t terminalPresenter) Present(segments []segment) string {
 				} else if b >= 32 && b <= 126 {
 					if b == 0x20 || b == 0x09 || b == 0x0D || b == 0x0A {
 						bytes = append(bytes, asciiWhitespaceStyle.Render(fmt.Sprintf("%02x", b)))
-						printables = append(printables, asciiWhitespaceStyle.Render(string(b)))
+						printables = append(printables, asciiWhitespaceStyle.Render(" "))
 					} else {
 						bytes = append(bytes, asciiPrintableStyle.Render(fmt.Sprintf("%02x", b)))
 						printables = append(printables, asciiPrintableStyle.Render(string(b)))

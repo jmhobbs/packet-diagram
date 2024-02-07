@@ -53,8 +53,8 @@ Bytes remaining after the end of the description are discarded.
 ## TODO
 
   - [ ] Implement skipping in presentation
-  - [ ] Colorization
+  - [x] Colorization
   - [ ] Additional rules
-  - [ ] Split parsing from presentation
+  - [x] Split parsing from presentation
   - [ ] Aternative renderers (HTML, Markdown, ???)
   - [ ] Stream packet reading
