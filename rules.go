@@ -59,44 +59,50 @@ func loadRules(filename string) ([]rule, error) {
 			continue
 		}
 
-		split := strings.SplitN(line, " ", 2)
-		if len(split) != 2 {
-			return nil, fmt.Errorf("Invalid description: %q", line)
+		rule, err := parseRuleLine(line)
+		if err != nil {
+			return nil, err
 		}
-
-		ruleStr := split[0]
-		description := split[1]
-
-		match := ruleMatcher.FindStringSubmatch(ruleStr)
-		if len(match) == 0 {
-			return nil, fmt.Errorf("Invalid rule: %q" + ruleStr)
-		}
-
-		// it's a fixed byte rule
-		if len(match[2]) > 0 {
-			length, _ := strconv.Atoi(ruleStr)
-			rules = append(rules, rule{
-				Description: description,
-				Matcher:     readBytes{length: length},
-				Skip:        match[1] == "-",
-			})
-			continue
-		}
-
-		// it's a scan rule
-		targetByte, _ := strconv.ParseUint(match[4], 16, 8)
-		rules = append(rules, rule{
-			Description: description,
-			Matcher:     scanToByte{targetByte: byte(targetByte)},
-			Skip:        match[3] == "->",
-		})
+		rules = append(rules, rule)
 	}
-
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-
 	return rules, nil
+}
+
+func parseRuleLine(line string) (rule, error) {
+	split := strings.SplitN(line, " ", 2)
+	if len(split) != 2 {
+		return rule{}, fmt.Errorf("Invalid description: %q", line)
+	}
+
+	ruleStr := split[0]
+	description := split[1]
+
+	match := ruleMatcher.FindStringSubmatch(ruleStr)
+	if len(match) == 0 {
+		return rule{}, fmt.Errorf("Invalid rule: %q" + ruleStr)
+	}
+
+	// it's a fixed byte rule
+	if len(match[2]) > 0 {
+		length, _ := strconv.Atoi(match[2])
+		return rule{
+			Description: description,
+			Matcher:     readBytes{length: length},
+			Skip:        match[1] == "-",
+		}, nil
+	}
+
+	// it's a scan rule
+	targetByte, _ := strconv.ParseUint(match[4], 16, 8)
+	return rule{
+		Description: description,
+		Matcher:     readUntil{targetByte: byte(targetByte)},
+		Skip:        match[3] == "->",
+	}, nil
+
 }
 
 type readBytes struct {
@@ -109,11 +115,11 @@ func (r readBytes) Match(pkt []byte) ([]byte, int, error) {
 	return bytes, r.length, nil
 }
 
-type scanToByte struct {
+type readUntil struct {
 	targetByte byte
 }
 
-func (r scanToByte) Match(pkt []byte) ([]byte, int, error) {
+func (r readUntil) Match(pkt []byte) ([]byte, int, error) {
 	indexOf := bytes.IndexByte(pkt, r.targetByte)
 	if indexOf == -1 {
 		return nil, 0, fmt.Errorf("Could not find terminating byte %02x", r.targetByte)
