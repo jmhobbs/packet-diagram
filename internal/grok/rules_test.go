@@ -1,4 +1,4 @@
-package main
+package grok
 
 import "testing"
 
@@ -43,16 +43,16 @@ func Test_ParseRuleLine(t *testing.T) {
 				t.Fail()
 			}
 
-			if r.Description != test.expectedDescription {
-				t.Errorf("Expected %q, got %q", test.expectedDescription, r.Description)
+			if r.Name != test.expectedDescription {
+				t.Errorf("Expected %q, got %q", test.expectedDescription, r.Name)
 			}
 
-			if r.Skip != test.expectedSkip {
-				t.Errorf("Expected %t, got %t", test.expectedSkip, r.Skip)
+			if r.skip != test.expectedSkip {
+				t.Errorf("Expected %t, got %t", test.expectedSkip, r.skip)
 			}
 
-			if r.Matcher != test.expectedMatcher {
-				t.Errorf("Expected %v, got %v", test.expectedMatcher, r.Matcher)
+			if r.matcher != test.expectedMatcher {
+				t.Errorf("Expected %v, got %v", test.expectedMatcher, r.matcher)
 			}
 		})
 	}

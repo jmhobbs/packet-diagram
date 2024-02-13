@@ -1,4 +1,4 @@
-package main
+package presenter
 
 import (
 	"fmt"
@@ -6,21 +6,16 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jmhobbs/packet-diagram/internal/grok"
 )
 
-type Presenter interface {
-	Present([]byte) string
-}
+type Terminal struct{}
 
-type terminalPresenter struct {
-}
-
-func (t terminalPresenter) Present(allSegments []segment) string {
-
+func (t Terminal) Present(allSegments []grok.Segment) string {
 	// flatten our skips into blocks
-	segments := []segment{}
+	segments := []grok.Segment{}
 	for _, s := range allSegments {
-		if len(segments) > 0 && s.skip && segments[len(segments)-1].skip {
+		if len(segments) > 0 && s.Skip && segments[len(segments)-1].Skip {
 			continue
 
 		}
@@ -29,45 +24,52 @@ func (t terminalPresenter) Present(allSegments []segment) string {
 
 	var builder strings.Builder
 
+	offsetStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#444444"))
 	nullStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
 	asciiPrintableStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00aaff"))
 	asciiWhitespaceStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff33"))
 	nonAsciiStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF22"))
 
+	// find the longest name, as that is the only variable portion of the output
 	longestName := 0
 	for _, segment := range segments {
-		if len(segment.name) > longestName {
-			longestName = len(segment.name)
+		if len(segment.Name) > longestName {
+			longestName = len(segment.Name)
 		}
 	}
 
-	descriptionLine := ""
-	descriptionLineHeavy := ""
+	// pre-build the heavy and light box lines for the name segments
+	nameBoxLine := ""
+	nameBoxLineHeavy := ""
 	for i := 0; i < longestName; i++ {
-		descriptionLine += "┄"
-		descriptionLineHeavy += "━"
+		nameBoxLine += "┄"
+		nameBoxLineHeavy += "━"
 	}
 
+	// build a format string to create name strings of the correct length and alignment
 	nameFmtString := fmt.Sprintf("%%-%ds", longestName)
 
-	if segments[0].skip {
-		builder.WriteString("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	} else {
-		builder.WriteString("┏━━━━━━━━┯━━━━━━━━━━━━━━━━━━━━━━━━━┯━━━━━━━━━━━━━━━━━━━━━━━━━┯━━━━━━━━┯━━━━━━━━┯━")
-	}
-	builder.WriteString(descriptionLineHeavy)
-	builder.WriteString("━┓\n")
-
+	// build and align the text for a skipped segment
 	skipText := fmt.Sprintf("┃%s┃", lipgloss.NewStyle().
 		Width(81+longestName).
 		Align(lipgloss.Center).Render("--- skipped ---"))
 
-	separator := "┠┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┼┄" + descriptionLine + "┄┨"
-	skipJoinBottomSseparator := "┠┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┬┄" + descriptionLine + "┄┨"
-	skipJoinTopSseparator := "┠┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┴┄" + descriptionLine + "┄┨"
+	// build the lines for between segments, normal, skip above and skip below
+	separator := "┠┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┼┄┄┄┄┄┄┄┄┼┄" + nameBoxLine + "┄┨"
+	skipJoinBottomSseparator := "┠┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┬┄┄┄┄┄┄┄┄┬┄" + nameBoxLine + "┄┨"
+	skipJoinTopSseparator := "┠┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┴┄" + nameBoxLine + "┄┨"
+
+	// write the header, differentiating if the first segment is skipped
+	if segments[0].Skip {
+		builder.WriteString("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	} else {
+		builder.WriteString("┏━━━━━━━━┯━━━━━━━━━━━━━━━━━━━━━━━━━┯━━━━━━━━━━━━━━━━━━━━━━━━━┯━━━━━━━━┯━━━━━━━━┯━")
+	}
+	builder.WriteString(nameBoxLineHeavy)
+	builder.WriteString("━┓\n")
 
 	for j, segment := range segments {
-		if segment.skip {
+		if segment.Skip {
 			builder.WriteString(skipText)
 			builder.WriteRune('\n')
 			if j+1 < len(segments) {
@@ -77,11 +79,12 @@ func (t terminalPresenter) Present(allSegments []segment) string {
 			continue
 		}
 
-		lines := int(math.Ceil(float64(len(segment.bytes)) / 16.0))
+		lines := int(math.Ceil(float64(len(segment.Bytes)) / 16.0))
 
 		for line := 0; line < lines; line++ {
-			lineBytes := segment.bytes[line*16 : min(segment.length, (line+1)*16)]
+			lineBytes := segment.Bytes[line*16 : min(segment.Length, (line+1)*16)]
 
+			// build up strings for hex encoded bytes, and the printable representations
 			bytes := []string{}
 			printables := []string{}
 			for _, b := range lineBytes {
@@ -108,16 +111,16 @@ func (t terminalPresenter) Present(allSegments []segment) string {
 				printables = append(printables, " ")
 			}
 
+			// only print the name for the first line of a segment
 			name := fmt.Sprintf(nameFmtString, "")
-
 			if line == 0 {
-				name = fmt.Sprintf(nameFmtString, segment.name)
+				name = fmt.Sprintf(nameFmtString, segment.Name)
 			}
 
 			fmt.Fprintf(
 				&builder,
-				"┃%08d│ %s ┊ %s │%s┊%s│ %s ┃\n",
-				segment.offset+(16*line),
+				"┃%s│ %s ┊ %s │%s┊%s│ %s ┃\n",
+				offsetStyle.Render(fmt.Sprintf("%08d", segment.Offset+(16*line))),
 				strings.Join(bytes[:8], " "),
 				strings.Join(bytes[8:], " "),
 				strings.Join(printables[:8], ""),
@@ -127,7 +130,7 @@ func (t terminalPresenter) Present(allSegments []segment) string {
 		}
 
 		if j < len(segments)-1 {
-			if segments[j+1].skip {
+			if segments[j+1].Skip {
 				builder.WriteString(skipJoinTopSseparator)
 			} else {
 				builder.WriteString(separator)
@@ -136,12 +139,12 @@ func (t terminalPresenter) Present(allSegments []segment) string {
 		}
 	}
 
-	if segments[len(segments)-1].skip {
+	if segments[len(segments)-1].Skip {
 		builder.WriteString("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	} else {
 		builder.WriteString("┗━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━┷━━━━━━━━┷━━━━━━━━┷━")
 	}
-	builder.WriteString(descriptionLineHeavy)
+	builder.WriteString(nameBoxLineHeavy)
 	builder.WriteString("━┛\n")
 
 	return builder.String()
