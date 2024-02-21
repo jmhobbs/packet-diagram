@@ -36,5 +36,5 @@ func main() {
 		offset += segment.Length
 	}
 
-	fmt.Print(presenter.Terminal{}.Present(segments))
+	fmt.Print(presenter.Terminal{}.Present(segments, true))
 }

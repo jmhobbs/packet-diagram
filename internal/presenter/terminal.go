@@ -7,11 +7,18 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jmhobbs/packet-diagram/internal/grok"
+	"github.com/muesli/termenv"
 )
 
 type Terminal struct{}
 
-func (t Terminal) Present(allSegments []grok.Segment) string {
+func (t Terminal) Present(allSegments []grok.Segment, color bool) string {
+	if color {
+		lipgloss.SetColorProfile(termenv.TrueColor)
+	} else {
+		lipgloss.SetColorProfile(termenv.Ascii)
+	}
+
 	// flatten our skips into blocks
 	segments := []grok.Segment{}
 	for _, s := range allSegments {
@@ -24,11 +31,11 @@ func (t Terminal) Present(allSegments []grok.Segment) string {
 
 	var builder strings.Builder
 
-	offsetStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#444444"))
-	nullStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
-	asciiPrintableStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00aaff"))
-	asciiWhitespaceStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff33"))
-	nonAsciiStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF22"))
+	offsetStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	nullStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	asciiPrintableStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14"))
+	asciiWhitespaceStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	nonAsciiStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 
 	// find the longest name, as that is the only variable portion of the output
 	longestName := 0
