@@ -12,11 +12,9 @@ import (
 
 type Terminal struct{}
 
-func (t Terminal) Present(allSegments []grok.Segment, color bool) string {
-	if color {
+func (t Terminal) Present(allSegments []grok.Segment, config Config) string {
+	if config.ForceColor {
 		lipgloss.SetColorProfile(termenv.TrueColor)
-	} else {
-		lipgloss.SetColorProfile(termenv.Ascii)
 	}
 
 	// flatten our skips into blocks
