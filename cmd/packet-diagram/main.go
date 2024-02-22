@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/jmhobbs/packet-diagram/internal/grok"
 	"github.com/jmhobbs/packet-diagram/internal/presenter"
@@ -15,7 +17,8 @@ func main() {
 	fs := ff.NewFlagSet("packet-diagram [options] <packet-file> <grok-file>")
 
 	var (
-		forceColor = fs.Bool('c', "force-color", "Force color output, even if not connected to a terminal")
+		forceColor   = fs.Bool(0, "force-color", "Force color output, even if not connected to a terminal")
+		onlySegments = fs.String(0, "range", "", "Only show segments in given range, inclusive, zero indexed. e.g. 5-12")
 	)
 
 	err := ff.Parse(fs, os.Args[1:])
@@ -54,8 +57,27 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
 		segments = append(segments, segment)
 		offset += segment.Length
+	}
+
+	// TODO: Move some of this up before we load and parse everything
+	if *onlySegments != "" {
+		rangeStrs := strings.SplitN(*onlySegments, "-", 2)
+		start, err := strconv.Atoi(rangeStrs[0])
+		if err != nil {
+			panic(err)
+		}
+		if len(rangeStrs) == 1 {
+			segments = []grok.Segment{segments[start]}
+		} else {
+			end, err := strconv.Atoi(rangeStrs[1])
+			if err != nil {
+				panic(err)
+			}
+			segments = segments[start : end+1]
+		}
 	}
 
 	fmt.Print(presenter.Terminal{}.Present(segments, presenter.Config{ForceColor: *forceColor}))
