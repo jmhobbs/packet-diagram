@@ -8,9 +8,11 @@ Describing a packet is done in a simple text file. Each line is a rule and a des
 
 Currently, there are four rules:
 
-| `N` | Return the next `N` bytes |
-| `-N` | Skip the next `N` bytes |
-| `>XX` | Return until the next instance of the byte value `XX` (in base 16) |
+| Rule   | Description |
+|-------:|-------------|
+| `N`    | Return the next `N` bytes |
+| `-N`   | Skip the next `N` bytes |
+| `>XX`  | Return until the next instance of the byte value `XX` (in base 16) |
 | `->XX` | Skip until the next instance of the byte value `XX` (in base 16) |
 
 The input file is then sliced up based on this description and printed with offset, bytes, printables and description.
